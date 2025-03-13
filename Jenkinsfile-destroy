@@ -18,10 +18,36 @@ pipeline {
                 bat 'terraform init'
             }
         }
-        stage('Destroy') {
+        stage('Plan') {
             steps {
-                bat 'terraform destroy --auto-approve'
+                bat 'terraform plan -out=tfplan'
+                bat 'terraform show -no-color tfplan > tfplan.txt'
             }
+        }
+        stage('Apply') {
+            steps {
+                script {
+                    def plan = readFile 'tfplan.txt'
+                    input message: "Do you want to apply the plan?",
+                    parameters: [text(name: 'Plan', description: 'Please review the plan', defaultValue: plan)]
+                    bat "terraform apply -input=false tfplan"
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            emailext subject: "Terraform Apply: SUCCESS ✅",
+                     body: "Terraform apply was successfully executed.\n\nCheck Jenkins console for more details.",
+                     recipientProviders: [[$class: 'DevelopersRecipientProvider']],
+                     to: 'your-email@example.com'
+        }
+        failure {
+            emailext subject: "Terraform Apply: FAILED ❌",
+                     body: "Terraform apply failed. Please check Jenkins for error logs.",
+                     recipientProviders: [[$class: 'DevelopersRecipientProvider']],
+                     to: 'your-email@example.com'
         }
     }
 }
