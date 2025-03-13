@@ -2,52 +2,46 @@ pipeline {
     agent any
 
     environment {
-        AWS_ACCESS_KEY_ID     = credentials('aws-access-key-id')
+        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
-        AWS_DEFAULT_REGION    = 'us-east-1'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/SamarthGaikwad7/Demo-TJI.git'
+                git 'https://github.com/SamarthGaikwad7/Demo-TJI.git'
             }
         }
+
         stage('Terraform Init') {
             steps {
                 bat 'terraform init'
             }
         }
-        stage('Plan') {
+
+        stage('Terraform Plan') {
             steps {
                 bat 'terraform plan -out=tfplan'
-                bat 'terraform show -no-color tfplan > tfplan.txt'
             }
         }
-        stage('Apply') {
+
+        stage('Terraform Apply') {
             steps {
-                script {
-                    def plan = readFile 'tfplan.txt'
-                    input message: "Do you want to apply the plan?",
-                    parameters: [text(name: 'Plan', description: 'Please review the plan', defaultValue: plan)]
-                    bat "terraform apply -input=false tfplan"
-                }
+                bat 'terraform apply -auto-approve tfplan'
             }
         }
     }
-    
+
     post {
         success {
-            emailext subject: "Terraform Apply: SUCCESS ✅",
-                     body: "Terraform apply was successfully executed.\n\nCheck Jenkins console for more details.",
-                     recipientProviders: [[$class: 'DevelopersRecipientProvider']],
-                     to: 'your-email@example.com'
+            emailext subject: "Terraform Apply Successful",
+                     body: "The Terraform apply has completed successfully.\n\nCheck Jenkins for details.",
+                     to: 'samarth633@gmail.com'
         }
         failure {
-            emailext subject: "Terraform Apply: FAILED ❌",
-                     body: "Terraform apply failed. Please check Jenkins for error logs.",
-                     recipientProviders: [[$class: 'DevelopersRecipientProvider']],
-                     to: 'your-email@example.com'
+            emailext subject: "Terraform Apply Failed",
+                     body: "The Terraform apply has failed.\n\nCheck Jenkins for details.",
+                     to: 'samarth633@gmail.com'
         }
     }
 }
